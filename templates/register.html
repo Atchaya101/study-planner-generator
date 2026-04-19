@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+
+    <div class="auth-brand">
+      <i class="bi bi-calendar3"></i>
+      <span>StudyPlan</span>
+    </div>
+    <h1 class="auth-title">Create account</h1>
+    <p class="auth-sub">Start planning your study schedule</p>
+
+    {% if error %}
+    <div class="alert-custom error">
+      <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('register') }}" novalidate id="registerForm">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div class="input-icon">
+          <i class="bi bi-person"></i>
+          <input type="text" id="username" name="username" placeholder="choose a username"
+                 required minlength="3" autocomplete="username"/>
+        </div>
+        <small class="form-hint">At least 3 characters, no spaces.</small>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-icon">
+          <i class="bi bi-lock"></i>
+          <input type="password" id="password" name="password" placeholder="min. 6 characters"
+                 required minlength="6" autocomplete="new-password"/>
+          <button type="button" class="pwd-toggle" onclick="togglePwd('password')">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm">Confirm Password</label>
+        <div class="input-icon">
+          <i class="bi bi-lock-fill"></i>
+          <input type="password" id="confirm" name="confirm" placeholder="repeat password"
+                 required autocomplete="new-password"/>
+        </div>
+        <small class="form-hint match-hint" id="matchHint"></small>
+      </div>
+
+      <!-- Strength bar -->
+      <div class="strength-wrap">
+        <div class="strength-bar" id="strengthBar"></div>
+      </div>
+      <small class="form-hint" id="strengthLabel"></small>
+
+      <button type="submit" class="btn-primary-full">
+        Create account <i class="bi bi-arrow-right"></i>
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      Already have an account? <a href="{{ url_for('login') }}">Log in</a>
+    </p>
+  </div>
+
+  <div class="auth-deco">
+    <div class="deco-content">
+      <h2>Get Organised.<br/>Stay Ahead.</h2>
+      <p>A free, simple study planner that adapts to your schedule and keeps you on track.</p>
+      <ul class="deco-list">
+        <li><i class="bi bi-check2-circle"></i> Free forever</li>
+        <li><i class="bi bi-check2-circle"></i> Data stored locally</li>
+        <li><i class="bi bi-check2-circle"></i> No ads, no tracking</li>
+        <li><i class="bi bi-check2-circle"></i> Dark mode included</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+  // Live password-match feedback
+  const pwd  = document.getElementById("password");
+  const conf = document.getElementById("confirm");
+  const hint = document.getElementById("matchHint");
+
+  conf.addEventListener("input", () => {
+    if (conf.value === "") { hint.textContent = ""; return; }
+    if (conf.value === pwd.value) {
+      hint.textContent = "✓ Passwords match";
+      hint.style.color = "var(--green)";
+    } else {
+      hint.textContent = "✗ Passwords do not match";
+      hint.style.color = "var(--red)";
+    }
+  });
+
+  // Password strength indicator
+  const bar   = document.getElementById("strengthBar");
+  const label = document.getElementById("strengthLabel");
+  pwd.addEventListener("input", () => {
+    const v = pwd.value;
+    let score = 0;
+    if (v.length >= 6)  score++;
+    if (v.length >= 10) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const pct   = (score / 5) * 100;
+    const color = score <= 1 ? "var(--red)" : score <= 3 ? "var(--yellow)" : "var(--green)";
+    const text  = score <= 1 ? "Weak" : score <= 3 ? "Moderate" : "Strong";
+    bar.style.width      = pct + "%";
+    bar.style.background = color;
+    label.textContent    = v ? `Strength: ${text}` : "";
+  });
+</script>
+{% endblock %}
+{% endblock %}

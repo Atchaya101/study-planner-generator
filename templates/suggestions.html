@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}AI Suggestions{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-lightbulb-fill" style="color:#f59e0b"></i> Study Suggestions</h1>
+    <p class="page-sub">Smart, rule-based insights based on your subjects and study history.</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('pomodoro') }}" class="btn-accent"><i class="bi bi-stopwatch"></i> Pomodoro</a>
+    <a href="{{ url_for('analytics') }}" class="btn-secondary"><i class="bi bi-bar-chart-line"></i> Analytics</a>
+  </div>
+</div>
+
+<!-- Summary bar -->
+<div class="suggest-meta mb-4">
+  <span><i class="bi bi-journal-bookmark"></i> {{ subjects|length }} subject{{ 's' if subjects|length != 1 else '' }}</span>
+  <span><i class="bi bi-lightbulb"></i> {{ suggestions|length }} suggestion{{ 's' if suggestions|length != 1 else '' }}</span>
+  <span class="suggest-refresh" onclick="location.reload()"><i class="bi bi-arrow-clockwise"></i> Refresh</span>
+</div>
+
+{% if not subjects %}
+<div class="empty-full">
+  <i class="bi bi-journal-plus"></i>
+  <h3>No subjects yet</h3>
+  <p>Add subjects on the <a href="{{ url_for('dashboard') }}">Dashboard</a> to receive personalised suggestions.</p>
+</div>
+
+{% elif not suggestions %}
+<div class="empty-full" style="color:var(--green)">
+  <i class="bi bi-check-circle-fill"></i>
+  <h3>All good!</h3>
+  <p>No issues detected. Keep studying and logging your sessions.</p>
+</div>
+
+{% else %}
+<div class="suggestions-grid">
+  {% for tip in suggestions %}
+  <div class="suggestion-card suggest-{{ tip.type }}">
+    <div class="suggest-icon-wrap suggest-icon-{{ tip.type }}">
+      <i class="bi {{ tip.icon }}"></i>
+    </div>
+    <div class="suggest-body">
+      <div class="suggest-title">{{ tip.title }}</div>
+      {% if tip.subject %}
+      <div class="suggest-subject"><i class="bi bi-book"></i> {{ tip.subject }}</div>
+      {% endif %}
+      <p class="suggest-text">{{ tip.body }}</p>
+      {% if tip.action %}
+      <div class="suggest-actions">
+        {% if tip.action == "Start Pomodoro" or tip.action == "Open Pomodoro" %}
+          <a href="{{ url_for('pomodoro') }}" class="suggest-btn">{{ tip.action }} →</a>
+        {% elif tip.action == "Review schedule" %}
+          <a href="{{ url_for('timetable_view') }}" class="suggest-btn">{{ tip.action }} →</a>
+        {% elif tip.action == "Edit subject" and tip.subject %}
+          <a href="{{ url_for('dashboard') }}" class="suggest-btn">{{ tip.action }} →</a>
+        {% else %}
+          <a href="{{ url_for('dashboard') }}" class="suggest-btn">{{ tip.action }} →</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- How it works -->
+<div class="card-box mt-5">
+  <h2 class="card-box-title"><i class="bi bi-cpu"></i> How Suggestions Work</h2>
+  <div class="how-grid">
+    <div class="how-item">
+      <div class="how-icon"><i class="bi bi-exclamation-triangle"></i></div>
+      <strong>Neglect Detection</strong>
+      <p>Flags high-priority subjects with less than 30% of their weekly study target completed.</p>
+    </div>
+    <div class="how-item">
+      <div class="how-icon"><i class="bi bi-calendar-x"></i></div>
+      <strong>Deadline Alerts</strong>
+      <p>Warns you when a deadline is within 5 days, and notices past-due deadlines.</p>
+    </div>
+    <div class="how-item">
+      <div class="how-icon"><i class="bi bi-trophy"></i></div>
+      <strong>Progress Praise</strong>
+      <p>Celebrates when you exceed your weekly study target by 10%+ for a subject.</p>
+    </div>
+    <div class="how-item">
+      <div class="how-icon"><i class="bi bi-pie-chart"></i></div>
+      <strong>Balance Check</strong>
+      <p>Detects when low-priority subjects are over-allocated compared to higher ones.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

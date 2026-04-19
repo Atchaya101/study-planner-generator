@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Notes — {{ subject.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <a href="{{ url_for('dashboard') }}" class="back-link"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+    <h1 class="page-title" style="display:flex;align-items:center;gap:.6rem">
+      <span class="subject-dot" style="background:{{ subject.color }}"></span>
+      {{ subject.name }}
+    </h1>
+    <p class="page-sub">
+      <span class="priority-badge priority-{{ subject.priority.lower() }}">{{ subject.priority }} priority</span>
+      {% if subject.deadline %}<span style="margin-left:.5rem"><i class="bi bi-calendar-event"></i> Due {{ subject.deadline }}</span>{% endif %}
+    </p>
+  </div>
+  <a href="{{ url_for('subject_notes', sid=subject.id) }}" class="btn-secondary">
+    <i class="bi bi-arrow-clockwise"></i> Refresh
+  </a>
+</div>
+
+<div class="two-col">
+
+  <!-- ── NOTES ──────────────────────────────── -->
+  <div class="card-box">
+    <h2 class="card-box-title">
+      <i class="bi bi-journal-text"></i> Notes
+      <span class="badge-count">{{ notes|length }}</span>
+    </h2>
+
+    <!-- Add note form -->
+    <form method="POST" action="{{ url_for('add_note', sid=subject.id) }}" class="note-form">
+      <textarea name="content" rows="3" placeholder="Write a note, formula, reminder…"
+                class="form-ctrl note-textarea" required></textarea>
+      <button type="submit" class="btn-primary" style="margin-top:.6rem">
+        <i class="bi bi-plus-lg"></i> Add Note
+      </button>
+    </form>
+
+    <div class="notes-list" style="margin-top:1.25rem">
+      {% if notes %}
+        {% for note in notes %}
+        <div class="note-item">
+          <div class="note-content">{{ note.content }}</div>
+          <div class="note-footer">
+            <span class="note-date"><i class="bi bi-clock"></i> {{ note.created[:16] }}</span>
+            <form method="POST" action="{{ url_for('delete_note', nid=note.id) }}"
+                  onsubmit="return confirm('Delete this note?')" style="display:inline">
+              <button type="submit" class="btn-icon danger" title="Delete note">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state"><i class="bi bi-journal-plus"></i><p>No notes yet. Add one above!</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── ATTACHMENTS ───────────────────────── -->
+  <div class="card-box">
+    <h2 class="card-box-title">
+      <i class="bi bi-paperclip"></i> Attachments
+      <span class="badge-count">{{ attachments|length }}</span>
+    </h2>
+
+    <!-- Upload form -->
+    <form method="POST" action="{{ url_for('upload_attachment', sid=subject.id) }}"
+          enctype="multipart/form-data" id="uploadForm">
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+        <i class="bi bi-cloud-upload"></i>
+        <p>Click or drag a file here</p>
+        <small>PDF, images, DOCX, TXT — max recommended 10 MB</small>
+        <input type="file" name="file" id="fileInput" style="display:none"
+               onchange="showFileName(this); document.getElementById('uploadForm').submit()"/>
+      </div>
+      <div id="fileNameDisplay" class="file-name-display" style="display:none"></div>
+    </form>
+
+    <div class="attachments-list" style="margin-top:1.25rem">
+      {% if attachments %}
+        {% for att in attachments %}
+        <div class="att-item">
+          <div class="att-icon">
+            {% set ext = att.orig_name.rsplit('.', 1)[-1].lower() %}
+            {% if ext == 'pdf' %}<i class="bi bi-file-earmark-pdf-fill" style="color:#ef4444"></i>
+            {% elif ext in ['png','jpg','jpeg','gif'] %}<i class="bi bi-file-earmark-image-fill" style="color:#6366f1"></i>
+            {% elif ext == 'docx' %}<i class="bi bi-file-earmark-word-fill" style="color:#3b82f6"></i>
+            {% else %}<i class="bi bi-file-earmark-text-fill" style="color:#64748b"></i>{% endif %}
+          </div>
+          <div class="att-info">
+            <div class="att-name">{{ att.orig_name }}</div>
+            <div class="att-date"><i class="bi bi-clock"></i> {{ att.created[:16] }}</div>
+          </div>
+          <div class="att-actions">
+            <a href="{{ url_for('download_attachment', aid=att.id) }}" class="btn-icon" title="Download">
+              <i class="bi bi-download"></i>
+            </a>
+            <form method="POST" action="{{ url_for('delete_attachment', aid=att.id) }}"
+                  onsubmit="return confirm('Delete this file?')" style="display:inline">
+              <button type="submit" class="btn-icon danger" title="Delete"><i class="bi bi-trash3"></i></button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state"><i class="bi bi-paperclip"></i><p>No attachments yet.</p></div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% block extra_js %}
+<script>
+function showFileName(input) {
+  const d = document.getElementById("fileNameDisplay");
+  if (input.files.length > 0) {
+    d.textContent = "Uploading: " + input.files[0].name;
+    d.style.display = "block";
+  }
+}
+
+// Drag-and-drop on upload zone
+const zone = document.getElementById("uploadZone");
+zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag-over"); });
+zone.addEventListener("dragleave", () => zone.classList.remove("drag-over"));
+zone.addEventListener("drop", e => {
+  e.preventDefault(); zone.classList.remove("drag-over");
+  const fi = document.getElementById("fileInput");
+  fi.files = e.dataTransfer.files;
+  showFileName(fi);
+  document.getElementById("uploadForm").submit();
+});
+</script>
+{% endblock %}
+{% endblock %}

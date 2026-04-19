@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-sub">Manage your subjects and study schedule, <strong>{{ username }}</strong>.</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('suggestions_page') }}" class="btn-secondary">
+      <i class="bi bi-lightbulb"></i> Suggestions
+    </a>
+    <a href="{{ url_for('pomodoro') }}" class="btn-secondary">
+      <i class="bi bi-stopwatch"></i> Pomodoro
+    </a>
+    <a href="{{ url_for('timetable_view') }}" class="btn-accent">
+      <i class="bi bi-table"></i> View Timetable
+    </a>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(99,102,241,.15);color:#6366f1">
+      <i class="bi bi-book"></i>
+    </div>
+    <div>
+      <div class="stat-num">{{ subjects|length }}</div>
+      <div class="stat-label">Total Subjects</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(239,68,68,.12);color:#ef4444">
+      <i class="bi bi-exclamation-circle"></i>
+    </div>
+    <div>
+      <div class="stat-num">{{ subjects|selectattr('priority','equalto','High')|list|length }}</div>
+      <div class="stat-label">High Priority</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(245,158,11,.12);color:#f59e0b">
+      <i class="bi bi-clock"></i>
+    </div>
+    <div>
+      <div class="stat-num">{{ "%.1f"|format(subjects|sum(attribute='hours_per_day')) }}h</div>
+      <div class="stat-label">Daily Study Target</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon" style="background:rgba(34,197,94,.12);color:#22c55e">
+      <i class="bi bi-calendar-check"></i>
+    </div>
+    <div>
+      <div class="stat-num">{{ subjects|selectattr('deadline')|list|length }}</div>
+      <div class="stat-label">With Deadlines</div>
+    </div>
+  </div>
+</div>
+
+<!-- Error / success flash -->
+{% if form_error %}
+<div class="alert-custom error mb-3">
+  <i class="bi bi-exclamation-triangle-fill"></i> {{ form_error }}
+</div>
+{% endif %}
+
+<div class="two-col">
+
+  <!-- ── ADD SUBJECT FORM ─────────────────────── -->
+  <div class="card-box">
+    <h2 class="card-box-title"><i class="bi bi-plus-circle"></i> Add Subject</h2>
+    <form method="POST" action="{{ url_for('add_subject') }}" id="addForm">
+
+      <div class="form-group">
+        <label>Subject / Task Name *</label>
+        <input type="text" name="name" placeholder="e.g. Mathematics" required class="form-ctrl"/>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Hours per Day *</label>
+          <input type="number" name="hours_per_day" value="1" min="0.5" max="12" step="0.5" class="form-ctrl"/>
+        </div>
+        <div class="form-group">
+          <label>Priority *</label>
+          <select name="priority" class="form-ctrl">
+            <option value="High">🔴 High</option>
+            <option value="Medium" selected>🟡 Medium</option>
+            <option value="Low">🟢 Low</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Deadline <small>(optional)</small></label>
+          <input type="date" name="deadline" class="form-ctrl"/>
+        </div>
+        <div class="form-group">
+          <label>Label Color</label>
+          <input type="color" name="color" value="#6366f1" class="form-ctrl color-picker"/>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary-full">
+        <i class="bi bi-plus-lg"></i> Add Subject
+      </button>
+    </form>
+  </div>
+
+  <!-- ── SUBJECT LIST ─────────────────────────── -->
+  <div class="card-box">
+    <h2 class="card-box-title"><i class="bi bi-list-ul"></i> Your Subjects
+      <span class="badge-count">{{ subjects|length }}</span>
+    </h2>
+
+    {% if subjects %}
+    <div class="subject-list" id="subjectList">
+      {% for s in subjects %}
+      <div class="subject-item" data-id="{{ s.id }}">
+        <div class="subject-color-bar" style="background:{{ s.color }}"></div>
+        <div class="subject-info">
+          <div class="subject-name">{{ s.name }}</div>
+          <div class="subject-meta">
+            <span class="priority-badge priority-{{ s.priority.lower() }}">{{ s.priority }}</span>
+            <span><i class="bi bi-clock"></i> {{ s.hours_per_day }}h/day</span>
+            {% if s.deadline %}
+            <span><i class="bi bi-calendar-event"></i> {{ s.deadline }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="subject-actions">
+          <a href="{{ url_for('subject_notes', sid=s.id) }}" class="btn-icon btn-notes" title="Notes & Files">
+            <i class="bi bi-journal-text"></i>
+          </a>
+          <button class="btn-icon" title="Edit"
+                  onclick="openEdit({{ s.id }}, '{{ s.name }}', {{ s.hours_per_day }}, '{{ s.priority }}', '{{ s.deadline or '' }}', '{{ s.color }}')">
+            <i class="bi bi-pencil"></i>
+          </button>
+          <form method="POST" action="{{ url_for('delete_subject', sid=s.id) }}"
+                onsubmit="return confirm('Delete {{ s.name }}?')" style="display:inline">
+            <button type="submit" class="btn-icon danger" title="Delete">
+              <i class="bi bi-trash3"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <i class="bi bi-journal-plus"></i>
+      <p>No subjects yet. Add one to get started!</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div><!-- end two-col -->
+
+<!-- ── EDIT MODAL ─────────────────────────────── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3><i class="bi bi-pencil-square"></i> Edit Subject</h3>
+      <button onclick="closeEdit()" class="modal-close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <form method="POST" id="editForm">
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" name="name" id="editName" required class="form-ctrl"/>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Hours / Day</label>
+          <input type="number" name="hours_per_day" id="editHours" min="0.5" max="12" step="0.5" class="form-ctrl"/>
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" id="editPriority" class="form-ctrl">
+            <option value="High">🔴 High</option>
+            <option value="Medium">🟡 Medium</option>
+            <option value="Low">🟢 Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div class="form-group">
+          <label>Deadline</label>
+          <input type="date" name="deadline" id="editDeadline" class="form-ctrl"/>
+        </div>
+        <div class="form-group">
+          <label>Color</label>
+          <input type="color" name="color" id="editColor" class="form-ctrl color-picker"/>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="closeEdit()" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+function openEdit(id, name, hours, priority, deadline, color) {
+  document.getElementById("editName").value     = name;
+  document.getElementById("editHours").value    = hours;
+  document.getElementById("editPriority").value = priority;
+  document.getElementById("editDeadline").value = deadline;
+  document.getElementById("editColor").value    = color;
+  document.getElementById("editForm").action    = `/edit_subject/${id}`;
+  document.getElementById("editModal").classList.add("open");
+}
+function closeEdit() {
+  document.getElementById("editModal").classList.remove("open");
+}
+// Close modal on overlay click
+document.getElementById("editModal").addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeEdit();
+});
+</script>
+{% endblock %}
+{% endblock %}

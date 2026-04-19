@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Pomodoro Timer{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-stopwatch-fill" style="color:var(--red)"></i> Pomodoro Timer</h1>
+    <p class="page-sub">Focus in timed bursts. Log every session to track progress.</p>
+  </div>
+  <a href="{{ url_for('analytics') }}" class="btn-secondary"><i class="bi bi-bar-chart-line"></i> Analytics</a>
+</div>
+
+<div class="pomo-layout">
+
+  <!-- ── TIMER CARD ──────────────────────────── -->
+  <div class="card-box pomo-timer-card">
+
+    <!-- Mode tabs -->
+    <div class="pomo-tabs">
+      <button class="pomo-tab active" onclick="setMode('work',   document.getElementById('workMins').value  *60, this)">🍅 Focus</button>
+      <button class="pomo-tab"        onclick="setMode('short',  document.getElementById('shortMins').value *60, this)">☕ Short Break</button>
+      <button class="pomo-tab"        onclick="setMode('long',   document.getElementById('longMins').value  *60, this)">🌿 Long Break</button>
+    </div>
+
+    <!-- Big clock face -->
+    <div class="pomo-clock-wrap">
+      <svg class="pomo-ring" viewBox="0 0 200 200">
+        <circle class="ring-bg" cx="100" cy="100" r="90" fill="none" stroke-width="10"/>
+        <circle class="ring-prog" id="ringProg" cx="100" cy="100" r="90" fill="none"
+                stroke-width="10" stroke-dasharray="565.5" stroke-dashoffset="0"
+                transform="rotate(-90 100 100)"/>
+      </svg>
+      <div class="pomo-time" id="timerDisplay">25:00</div>
+      <div class="pomo-mode-label" id="modeLabel">Focus Session</div>
+    </div>
+
+    <!-- Controls -->
+    <div class="pomo-controls">
+      <button class="pomo-btn-start" id="startBtn" onclick="toggleTimer()">
+        <i class="bi bi-play-fill" id="startIcon"></i> Start
+      </button>
+      <button class="pomo-btn-reset" onclick="resetTimer()">
+        <i class="bi bi-arrow-counterclockwise"></i>
+      </button>
+    </div>
+
+    <!-- Subject selector -->
+    <div class="form-group" style="margin-top:1.5rem">
+      <label>Studying</label>
+      <select id="subjectSelect" class="form-ctrl">
+        <option value="">— General / No subject —</option>
+        {% for s in subjects %}
+        <option value="{{ s.id }}">{{ s.name }} ({{ s.priority }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Custom durations -->
+    <details class="pomo-settings">
+      <summary><i class="bi bi-gear"></i> Customize durations</summary>
+      <div class="form-row-2" style="margin-top:.75rem">
+        <div class="form-group">
+          <label>Focus (min)</label>
+          <input type="number" id="workMins"  value="25" min="1" max="90" class="form-ctrl"
+                 onchange="if(currentMode==='work') resetTimer()"/>
+        </div>
+        <div class="form-group">
+          <label>Short break (min)</label>
+          <input type="number" id="shortMins" value="5"  min="1" max="30" class="form-ctrl"
+                 onchange="if(currentMode==='short') resetTimer()"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Long break (min)</label>
+        <input type="number" id="longMins" value="15" min="5" max="60" class="form-ctrl"
+               onchange="if(currentMode==='long') resetTimer()"/>
+      </div>
+    </details>
+
+    <!-- Session counter -->
+    <div class="pomo-sessions-today">
+      <div class="pomo-stat"><span id="sessCount">0</span><small>Sessions today</small></div>
+      <div class="pomo-stat"><span id="totalMins">{{ total_today }}</span><small>Minutes logged</small></div>
+    </div>
+  </div>
+
+  <!-- ── SESSION LOG ─────────────────────────── -->
+  <div class="card-box pomo-log-card">
+    <h2 class="card-box-title">
+      <i class="bi bi-list-check"></i> Today's Log
+      <span class="badge-count" id="logCount">{{ today_sessions|length }}</span>
+    </h2>
+
+    <div id="sessionLog">
+      {% if today_sessions %}
+        {% for s in today_sessions %}
+        <div class="log-item">
+          <div class="log-icon"><i class="bi bi-check-circle-fill" style="color:var(--green)"></i></div>
+          <div class="log-info">
+            <div class="log-subject">{{ s.subject_name or 'General' }}</div>
+            <div class="log-meta">{{ s.duration }} min
+              {% if s.note %} · <em>{{ s.note }}</em>{% endif %}
+            </div>
+          </div>
+          <div class="log-time">{{ s.session_date }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state" id="emptyLog">
+          <i class="bi bi-stopwatch"></i><p>No sessions yet today.<br/>Start the timer!</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="pomo-weekly-tip">
+      <i class="bi bi-info-circle"></i>
+      <span>The Pomodoro technique: 25 min focused work → 5 min break → repeat. After 4 sessions, take a 15–30 min long break.</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Completion modal -->
+<div class="modal-overlay" id="doneModal">
+  <div class="modal-box" style="text-align:center;max-width:400px">
+    <div style="font-size:3rem">🍅</div>
+    <h3 style="font-family:var(--font-display);margin:.75rem 0 .5rem">Session Complete!</h3>
+    <p id="doneMsg" style="color:var(--text-2);margin-bottom:1.25rem"></p>
+    <div class="form-group">
+      <label>Session note (optional)</label>
+      <input type="text" id="sessionNote" placeholder="What did you cover?" class="form-ctrl"/>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:1rem">
+      <button onclick="skipLog()" class="btn-secondary">Skip</button>
+      <button onclick="confirmLog()" class="btn-primary"><i class="bi bi-check-lg"></i> Log Session</button>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+// ── State ───────────────────────────────────────────────────
+const MODES={work:{label:"Focus Session",color:"var(--red)"},
+             short:{label:"Short Break",color:"var(--green)"},
+             long:{label:"Long Break",color:"#0ea5e9"}};
+let currentMode="work", totalSecs=25*60, remaining=25*60, running=false, ticker=null;
+let completedDuration=0;
+const CIRCUMFERENCE=565.5;
+
+// ── UI refs ─────────────────────────────────────────────────
+const display  = document.getElementById("timerDisplay");
+const ring     = document.getElementById("ringProg");
+const modeLabel= document.getElementById("modeLabel");
+const startBtn = document.getElementById("startBtn");
+const startIcon= document.getElementById("startIcon");
+
+function getModeSecs() {
+  if(currentMode==="work")  return parseInt(document.getElementById("workMins").value)*60;
+  if(currentMode==="short") return parseInt(document.getElementById("shortMins").value)*60;
+  return parseInt(document.getElementById("longMins").value)*60;
+}
+
+function setMode(mode, secs, btn) {
+  if(running) return;
+  currentMode=mode;
+  document.querySelectorAll(".pomo-tab").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  totalSecs=remaining=getModeSecs();
+  updateDisplay(); updateRing();
+  modeLabel.textContent=MODES[mode].label;
+  ring.style.stroke=MODES[mode].color;
+  startBtn.style.background=MODES[mode].color;
+}
+
+function updateDisplay() {
+  const m=Math.floor(remaining/60), s=remaining%60;
+  display.textContent=`${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  document.title=`${display.textContent} — StudyPlan`;
+}
+
+function updateRing() {
+  const progress=remaining/totalSecs;
+  ring.style.strokeDashoffset=CIRCUMFERENCE*(1-progress);
+}
+
+function toggleTimer() {
+  if(running) { pauseTimer(); } else { startTimer(); }
+}
+
+function startTimer() {
+  running=true;
+  startIcon.className="bi bi-pause-fill";
+  startBtn.innerHTML='<i class="bi bi-pause-fill" id="startIcon"></i> Pause';
+  ticker=setInterval(()=>{
+    remaining--;
+    updateDisplay(); updateRing();
+    if(remaining<=0) { clearInterval(ticker); running=false; onComplete(); }
+  },1000);
+}
+
+function pauseTimer() {
+  clearInterval(ticker); running=false;
+  startBtn.innerHTML='<i class="bi bi-play-fill" id="startIcon"></i> Resume';
+}
+
+function resetTimer() {
+  clearInterval(ticker); running=false;
+  totalSecs=remaining=getModeSecs();
+  updateDisplay(); updateRing();
+  startBtn.innerHTML='<i class="bi bi-play-fill"></i> Start';
+}
+
+function onComplete() {
+  completedDuration=Math.round(getModeSecs()/60);
+  document.getElementById("doneMsg").textContent=
+    currentMode==="work"
+      ? `Great work! You completed a ${completedDuration}-minute focus session.`
+      : `Break done! Ready to focus again?`;
+  document.getElementById("sessionNote").value="";
+  document.getElementById("doneModal").classList.add("open");
+
+  // Browser notification
+  if(Notification.permission==="granted") {
+    new Notification("⏰ StudyPlan",{
+      body: currentMode==="work" ? "Focus session complete! Time for a break." : "Break over. Back to work!",
+      icon: "/static/img/icon-192.png"
+    });
+  }
+}
+
+function skipLog() {
+  document.getElementById("doneModal").classList.remove("open");
+  if(currentMode==="work") setModeByName("short");
+}
+
+function setModeByName(mode) {
+  const tabs=document.querySelectorAll(".pomo-tab");
+  const idx=mode==="work"?0:mode==="short"?1:2;
+  setMode(mode, getModeSecs(), tabs[idx]);
+}
+
+async function confirmLog() {
+  const sid=document.getElementById("subjectSelect").value || null;
+  const note=document.getElementById("sessionNote").value;
+  const res=await fetch("/api/pomodoro/log",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({subject_id:sid,duration:completedDuration,note})
+  });
+  if(res.ok) appendLogItem(sid,completedDuration,note);
+  document.getElementById("doneModal").classList.remove("open");
+  if(currentMode==="work") setModeByName("short");
+}
+
+function appendLogItem(sid, dur, note) {
+  document.getElementById("emptyLog")?.remove();
+  const subjectName=document.getElementById("subjectSelect").selectedOptions[0].text.replace(" (High)","").replace(" (Medium)","").replace(" (Low)","");
+  const log=document.getElementById("sessionLog");
+  const div=document.createElement("div"); div.className="log-item";
+  div.innerHTML=`<div class="log-icon"><i class="bi bi-check-circle-fill" style="color:var(--green)"></i></div>
+    <div class="log-info"><div class="log-subject">${sid?subjectName:"General"}</div>
+    <div class="log-meta">${dur} min${note?" · <em>"+note+"</em>":""}</div></div>
+    <div class="log-time">Just now</div>`;
+  log.prepend(div);
+  const cnt=document.getElementById("sessCount"); cnt.textContent=parseInt(cnt.textContent)+1;
+  const tot=document.getElementById("totalMins"); tot.textContent=parseInt(tot.textContent)+dur;
+  document.getElementById("logCount").textContent=parseInt(document.getElementById("logCount").textContent)+1;
+}
+
+// ── Notification permission ─────────────────────────────────
+if("Notification" in window && Notification.permission==="default") {
+  Notification.requestPermission();
+}
+
+// Init ring color
+ring.style.stroke=MODES[currentMode].color;
+startBtn.style.background=MODES[currentMode].color;
+updateDisplay();
+document.getElementById("sessCount").textContent=document.querySelectorAll(".log-item").length;
+
+// Close done modal on overlay click
+document.getElementById("doneModal").addEventListener("click",e=>{if(e.target===e.currentTarget)skipLog();});
+</script>
+{% endblock %}
+{% endblock %}

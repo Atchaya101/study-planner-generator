@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+  <div class="auth-card">
+
+    <!-- Brand -->
+    <div class="auth-brand">
+      <i class="bi bi-calendar3"></i>
+      <span>StudyPlan</span>
+    </div>
+    <h1 class="auth-title">Welcome back</h1>
+    <p class="auth-sub">Sign in to your planner</p>
+
+    <!-- Success message from registration -->
+    {% if success %}
+    <div class="alert-custom success">
+      <i class="bi bi-check-circle-fill"></i> Account created! You can now log in.
+    </div>
+    {% endif %}
+
+    <!-- Error message -->
+    {% if error %}
+    <div class="alert-custom error">
+      <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}" novalidate>
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div class="input-icon">
+          <i class="bi bi-person"></i>
+          <input type="text" id="username" name="username" placeholder="your username"
+                 required autocomplete="username"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-icon">
+          <i class="bi bi-lock"></i>
+          <input type="password" id="password" name="password" placeholder="••••••••"
+                 required autocomplete="current-password"/>
+          <button type="button" class="pwd-toggle" onclick="togglePwd('password')">
+            <i class="bi bi-eye" id="pwdIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary-full">
+        Sign in <i class="bi bi-arrow-right"></i>
+      </button>
+    </form>
+
+    <p class="auth-footer">
+      Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
+    </p>
+  </div>
+
+  <!-- Decorative panel -->
+  <div class="auth-deco">
+    <div class="deco-content">
+      <h2>Plan Smarter.<br/>Study Better.</h2>
+      <p>Automatically generate balanced weekly timetables based on your subjects, priorities, and deadlines.</p>
+      <ul class="deco-list">
+        <li><i class="bi bi-check2-circle"></i> Priority-based scheduling</li>
+        <li><i class="bi bi-check2-circle"></i> Balanced workload distribution</li>
+        <li><i class="bi bi-check2-circle"></i> PDF export &amp; weekly view</li>
+        <li><i class="bi bi-check2-circle"></i> Edit anytime, anywhere</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

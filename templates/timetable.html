@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Timetable{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Weekly Timetable</h1>
+    <p class="page-sub">Your auto-generated study schedule.</p>
+  </div>
+  <div class="header-actions">
+    <button class="notif-toggle" id="notifToggle" title="Toggle study reminders">
+      <div class="toggle-dot"></div>
+      <i class="bi bi-bell"></i>
+      <span class="notif-label">Notifications Off</span>
+    </button>
+    <a href="{{ url_for('export_ical', hours=available_hours) }}" class="btn-secondary">
+      <i class="bi bi-calendar3"></i> Export iCal
+    </a>
+    <a href="{{ url_for('download_pdf', hours=available_hours) }}" class="btn-accent">
+      <i class="bi bi-file-earmark-pdf"></i> Download PDF
+    </a>
+    <a href="{{ url_for('dashboard') }}" class="btn-secondary">
+      <i class="bi bi-pencil"></i> Edit Subjects
+    </a>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="card-box mb-4">
+  <div class="controls-row">
+    <div class="form-group" style="margin:0;min-width:200px">
+      <label>Available hours per day</label>
+      <input type="range" id="hoursRange" min="1" max="14" step="0.5"
+             value="{{ available_hours }}" oninput="updateHours(this.value)"/>
+      <span id="hoursLabel" class="hours-label">{{ available_hours }}h / day</span>
+    </div>
+    <button onclick="regenerate()" class="btn-primary">
+      <i class="bi bi-arrow-clockwise"></i> Regenerate
+    </button>
+  </div>
+</div>
+
+{% if not subjects %}
+<div class="empty-full">
+  <i class="bi bi-journal-x"></i>
+  <h3>No subjects found</h3>
+  <p>Add subjects on the <a href="{{ url_for('dashboard') }}">Dashboard</a> first.</p>
+</div>
+{% else %}
+
+<!-- Timetable grid -->
+<div class="tt-wrapper" id="ttWrapper">
+  {% set days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+  {% for day in days %}
+  {% set slots = schedule.get(day, []) %}
+  <div class="tt-day-col">
+    <div class="tt-day-head">{{ day }}</div>
+    {% if slots %}
+      {% for slot in slots %}
+      <div class="tt-slot" style="--slot-color:{{ slot.color }}">
+        <div class="slot-time">{{ slot.start }} – {{ slot.end }}</div>
+        <div class="slot-subject">{{ slot.subject }}</div>
+        <div class="slot-priority priority-{{ slot.priority.lower() }}">{{ slot.priority }}</div>
+        {% if slot.deadline %}
+        <div class="slot-deadline"><i class="bi bi-calendar2-event"></i> {{ slot.deadline }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="tt-empty">Free day</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Legend -->
+<div class="legend-row">
+  <span class="legend-item"><span class="dot priority-high"></span> High priority</span>
+  <span class="legend-item"><span class="dot priority-medium"></span> Medium priority</span>
+  <span class="legend-item"><span class="dot priority-low"></span> Low priority</span>
+</div>
+
+{% endif %}
+
+{% block extra_js %}
+<script>
+let currentHours = {{ available_hours }};
+
+function updateHours(val) {
+  currentHours = parseFloat(val);
+  document.getElementById("hoursLabel").textContent = val + "h / day";
+}
+
+function regenerate() {
+  window.location.href = `/timetable?hours=${currentHours}`;
+}
+
+document.getElementById("hoursRange")?.addEventListener("keydown", e => {
+  if (e.key === "Enter") regenerate();
+});
+
+// Expose today's schedule for the local reminder scheduler in main.js
+{% set today_name = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] %}
+window.todaySchedule = {{ schedule.get(today_name[now_weekday()], []) | tojson }};
+</script>
+{% endblock %}
+{% endblock %}
