@@ -146,3 +146,8 @@ Chart.js (v4.4) is loaded from CDN — no installation needed.
 - Set `debug=False`
 - Use environment variables for secrets (`python-dotenv`)
 - Add VAPID keys to `main.js` for real web push delivery
+
+## 👩‍💻 Author
+
+**Atchaya Parthipan**  
+- GitHub: https://github.com/Atchaya101
